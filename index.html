@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<style>
+    * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: Arial, Helvetica, sans-serif;
+}
+
+body {
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: linear-gradient(135deg, #74ebd5, #ACB6E5);
+}
+
+.container {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    gap:5px
+}
+#history {
+    min-width: 125px;
+    max-width: 250px;
+    height: 410px;
+    background-color: #ffffff;
+    border-radius: 10px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    font-size: 0.9rem;
+    color: #333;
+    border:1px solid #ccc;
+    padding:5px;
+    text-align: center;
+}
+#history-list {    
+    height: 380px;
+    overflow-y:auto; 
+    overflow-x: hidden;
+}
+#history-list li {
+    list-style-type: none;
+    margin-top: 5px;
+    padding-left: 20px;
+    text-align: left;
+    border:1px solid #ccc;
+    border-radius: 10px;
+    cursor: default;
+    white-space: nowrap;
+}
+
+.calculadora {
+    width: 320px;
+    height: 410px;
+    background-color: #ffffff;
+    border-radius: 15px;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+    overflow: hidden;
+    display: flex;
+    flex-wrap: wrap;
+}
+
+/* Display */
+.display {
+    width: 100%;
+    background-color: #222;
+    padding: 15px;
+    text-align: right;
+}
+.display input {
+    width: 100%;
+    height: 50px;
+    font-size: 1.8rem;
+    border: none;
+    outline: none;
+    background: transparent;
+    color: #fff;
+    text-align: right;
+}
+
+/* Área dos botões */
+.number {
+    width: 75%;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    padding: 10px;
+    background-color: #f9f9f9;
+    align-items: center;
+}
+
+.operation {
+    width: 25%;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 10px;
+    background-color: #f3f3f3;
+}
+
+button {
+    width: 100%;
+    height: 55px;
+    font-size: 1.4rem;
+    font-weight: bold;
+    border: none;
+    border-radius: 8px;
+    background-color: #e0e0e0;
+    cursor: pointer;
+    transition: all 0.2s ease-in-out;
+}
+
+button:hover {
+    background-color: #d0d0d0;
+    transform: scale(1.05);
+}
+
+/* Estilo especial para operadores */
+.operation button:last-child {
+    background-color: #03af03;
+}
+.operation button:last-child:hover {
+    background-color: #0d880d;
+}
+.operation button {
+    background-color: #ff9500;
+    color: #fff;
+}
+
+.operation button:hover {
+    background-color: #e68a00;
+}
+
+</style>
+<body>
+    <div class="container">
+        <div class="calculadora">
+            <div class="display">
+                <input type="text" id="result" disabled readonly value="0">
+            </div>
+            <div class="number">
+                <button>7</button>
+                <button>8</button>
+                <button>9</button>
+                <button>4</button>
+                <button>5</button>
+                <button>6</button>
+                <button>1</button>
+                <button>2</button>
+                <button>3</button>
+                <button>0</button>
+                <button>,</button>
+                <button>C</button>
+            </div>
+            <div class="operation">
+                <button>/</button>
+                <button>*</button>
+                <button>-</button>
+                <button>+</button>
+                <button>=</button>
+            </div>
+        </div>
+        <div id="history">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
+                <strong>Histórico</strong>
+                <p id="item"></p>
+            </div>
+            <ul id="history-list"></ul>
+        </div>
+    </div>
+    <script>
+        const buttons = document.querySelectorAll("button");
+        const result = document.getElementById("result");
+        const item = document.getElementById("item");
+        const historyList = document.getElementById("history-list");
+        
+        let ultimaConta = ""; // guarda a expressão completa anterior
+        let novaConta = false; // indica se a próxima digitação inicia uma nova conta
+
+
+        // Clique nos botões
+        buttons.forEach(btn => {
+            btn.addEventListener("click", () => handleInput(btn.textContent));
+        });
+
+        // Teclado físico
+        document.addEventListener("keydown", (e) => {
+            const key = e.key;
+
+            if (/^[0-9]$/.test(key)) { // números
+                handleInput(key);
+                e.preventDefault();
+            } else if (["+", "-", "*", "/", ","].includes(key)) { // operadores
+                handleInput(key);
+                e.preventDefault();
+            } else if (key === "Enter" || key === "=") { // calcular
+                handleInput("=");
+                e.preventDefault();
+            } else if (key === "Backspace") { // apagar último dígito
+                e.preventDefault();
+                if (result.value.length > 1 && result.value !== "Erro") {
+                    result.value = result.value.slice(0, -1);
+                } else {
+                    result.value = "0";
+                }
+            } else if (key.toUpperCase() === "C") { // limpar tudo
+                handleInput("C");
+                e.preventDefault();
+            }
+        });
+
+        // Função central
+        function handleInput(input) {
+            const operadores = ["+", "-", "*", "/"];
+            if (input === "=") {
+                try {
+                    const expression = result.value.replaceAll(",", ".").toString().replace(".", ",");
+                    const value = eval(expression.replace(",", ".")).toString().replace(".", ",");
+                    result.value = value;
+                    ultimaConta = value; // salva o resultado
+                    novaConta = true; // próxima digitação inicia nova conta
+                    addToHistory(expression, value);
+                } catch {
+                    result.value = "Erro";
+                    novaConta = true;
+                }
+            } else if (input === "C") {
+                result.value = "0";
+                ultimaConta = "";
+                novaConta = false;
+            } else if (operadores.includes(input)) {
+                // Se o resultado anterior existe e o display foi limpo
+                if (novaConta && ultimaConta) {
+                    result.value = ultimaConta + input; // inicia nova expressão com o resultado anterior
+                    novaConta = false;
+                } else {
+                    result.value += input;
+                }
+            } else {
+                if (novaConta) {
+                    result.value = input; // inicia nova conta
+                    novaConta = false;
+                } else if (result.value === "0" || result.value === "Erro") {
+                    result.value = input;
+                } else {
+                    result.value += input;
+                }
+            }
+        }
+
+        // Adiciona item ao histórico
+        function addToHistory(expression, value) {
+            const li = document.createElement("li");
+            li.textContent = `${expression} = ${value}`;
+            historyList.prepend(li); // adiciona no topo
+            const quantidade = historyList.children.length;
+            item.textContent =`${quantidade}`;
+        }
+</script>
+
+</body>
+</html>
